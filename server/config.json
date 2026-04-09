@@ -1,0 +1,29 @@
+{
+    "receiver_email": "rakshithk21@gmail.com",
+    "sender_email": "rakshithk21@gmail.com",
+    "app_password": "",
+    "alerts": {
+        "battery": {
+            "enabled": true,
+            "threshold": 20
+        },
+        "disk": {
+            "enabled": true,
+            "threshold": 85
+        },
+        "cpu": {
+            "enabled": true,
+            "threshold": 80
+        },
+        "ram": {
+            "enabled": true,
+            "threshold": 80
+        },
+        "ip_change": {
+            "enabled": true
+        },
+        "internet": {
+            "enabled": true
+        }
+    }
+}

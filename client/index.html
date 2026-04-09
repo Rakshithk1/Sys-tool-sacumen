@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SysTool 1.0 - Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Navigation (Screen 1) -->
+        <nav class="top-nav">
+            <div class="logo">SysAssist <span>AI <small class="v-tag">v1.2</small></span></div>
+            <ul class="nav-links">
+                <li id="nav-system" onclick="switchTab('system')">System Info</li>
+                <li id="nav-monitoring" class="active" onclick="switchTab('monitoring')">Monitoring and Alerts</li>
+                <li id="nav-network" onclick="switchTab('network')">Networks</li>
+                <li id="nav-security" onclick="switchTab('security')">Security</li>
+                <li id="nav-ai" onclick="switchTab('ai')">AI Assistant</li>
+            </ul>
+            <div class="theme-switch-wrapper">
+                <i data-lucide="sun" class="icon theme-icon-sun"></i>
+                <label class="theme-switch" for="checkbox">
+                    <input type="checkbox" id="checkbox" onclick="toggleTheme()" />
+                    <div class="slider round"></div>
+                </label>
+                <i data-lucide="moon" class="icon theme-icon-moon"></i>
+            </div>
+        </nav>
+
+        <!-- Main Content Area (Screen 2) -->
+        <main class="content-area">
+            
+            <!-- Monitoring Module -->
+            <section id="monitoring-module" class="module-section">
+                <div class="module-header">
+                    <h1>Adaptive Monitoring Platform</h1>
+                    <button id="start-btn" class="btn-primary" onclick="toggleMonitoring()">Start Monitoring</button>
+                </div>
+
+                <div class="dashboard-grid">
+                    <!-- Column 1: Configuration -->
+                    <div class="panel config-panel">
+                        <h2><i data-lucide="settings" class="icon"></i> Security Policies</h2>
+                        
+                        <div class="config-section">
+                            <h3><i data-lucide="mail" class="icon"></i> Alert Destinations</h3>
+                            <div class="config-group">
+                                <label>Recipient Email</label>
+                                <input type="email" id="email-input" placeholder="enter@email.com">
+                            </div>
+                            <div class="config-group">
+                                <label>Sender Gmail & App Password</label>
+                                <div class="dual-input">
+                                    <input type="email" id="sender-input" placeholder="sender@gmail.com">
+                                    <input type="password" id="password-input" placeholder="app password">
+                                </div>
+                                <small>Required for sending automated email alerts.</small>
+                            </div>
+                        </div>
+
+                        <div class="config-section">
+                            <h3><i data-lucide="bell" class="icon"></i> Notification Logic</h3>
+                            <div class="alert-grid">
+                                <div class="toggle-item">
+                                    <div class="toggle-info">
+                                        <span>Battery Critical</span>
+                                        <small>Threshold: <input type="number" id="battery-threshold" value="20" class="tiny-input">%</small>
+                                    </div>
+                                    <input type="checkbox" id="battery-toggle" checked>
+                                </div>
+                                <div class="toggle-item">
+                                    <div class="toggle-info">
+                                        <span>Storage Threshold</span>
+                                        <small>Threshold: <input type="number" id="disk-threshold" value="85" class="tiny-input">%</small>
+                                    </div>
+                                    <input type="checkbox" id="disk-toggle" checked>
+                                </div>
+                                <div class="toggle-item">
+                                    <div class="toggle-info">
+                                        <span>CPU Utilization</span>
+                                        <small>Threshold: <input type="number" id="cpu-threshold" value="80" class="tiny-input">%</small>
+                                    </div>
+                                    <input type="checkbox" id="cpu-toggle" checked>
+                                </div>
+                                <div class="toggle-item">
+                                    <div class="toggle-info">
+                                        <span>Memory Allocation</span>
+                                        <small>Threshold: <input type="number" id="ram-threshold" value="80" class="tiny-input">%</small>
+                                    </div>
+                                    <input type="checkbox" id="ram-toggle" checked>
+                                </div>
+                                <div class="toggle-item">
+                                    <div class="toggle-info">
+                                        <span>IP Translation</span>
+                                        <small>Track Address Shifts</small>
+                                    </div>
+                                    <input type="checkbox" id="ip-toggle" checked>
+                                </div>
+                                <div class="toggle-item">
+                                    <div class="toggle-info">
+                                        <span>Uplink Status</span>
+                                        <small>Gateway Connectivity</small>
+                                    </div>
+                                    <input type="checkbox" id="internet-toggle" checked>
+                                </div>
+                            </div>
+                        </div>
+                        <button class="btn-primary w-full" onclick="saveConfig()">Save Configuration</button>
+                    </div>
+
+                    <!-- Column 2: Live Status & Logs -->
+                    <div class="status-column">
+                        <div class="panel status-panel">
+                            <h2><i data-lucide="activity" class="icon"></i> Real-time Analytics</h2>
+                            
+                            <!-- Restore Session Sub-Section -->
+                            <div class="restore-session-pane">
+                                <div class="session-category">
+                                    <div class="category-header">
+                                        <span class="category-title">Active Applications</span>
+                                        <div class="add-btn" onclick="openResourcePicker('app')">+</div>
+                                    </div>
+                                    <div id="session-apps" class="resource-list"></div>
+                                </div>
+                                <div class="session-category">
+                                    <div class="category-header">
+                                        <span class="category-title">Critical Services</span>
+                                        <div class="add-btn" onclick="openResourcePicker('service')">+</div>
+                                    </div>
+                                    <div id="session-services" class="resource-list"></div>
+                                </div>
+                            </div>
+                            <div style="margin-bottom: 2rem; display: flex; gap: 1rem;">
+                                <button class="btn-primary" style="flex:1" onclick="saveSessionProfile()">Save Session</button>
+                                <button class="btn-secondary" style="flex:1" onclick="restoreSession()">Restore Session</button>
+                            </div>
+
+                            <div id="status-display" class="status-grid">
+                                <div class="status-card">
+                                    <div class="card-content">
+                                        <div class="info">
+                                            <span class="label">Battery</span>
+                                            <span id="stat-battery" class="value">--</span>
+                                        </div>
+                                        <div class="progress-container" id="radial-battery">
+                                            <svg width="50" height="50">
+                                                <circle class="track" cx="25" cy="25" r="20"></circle>
+                                                <circle class="progress-bar" cx="25" cy="25" r="20" style="stroke-dasharray: 125.6; stroke-dashoffset: 125.6;"></circle>
+                                            </svg>
+                                            <div class="percentage-text">--%</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="status-card">
+                                    <div class="card-content">
+                                        <div class="info">
+                                            <span class="label">CPU Usage</span>
+                                            <span id="stat-cpu" class="value">--</span>
+                                        </div>
+                                        <div class="progress-container" id="radial-cpu">
+                                            <svg width="50" height="50">
+                                                <circle class="track" cx="25" cy="25" r="20"></circle>
+                                                <circle class="progress-bar" cx="25" cy="25" r="20" style="stroke-dasharray: 125.6; stroke-dashoffset: 125.6;"></circle>
+                                            </svg>
+                                            <div class="percentage-text">--%</div>
+                                        </div>
+                                    </div>
+                                    <div class="sparkline-container" id="cpu-sparkline"></div>
+                                </div>
+                                <div class="status-card">
+                                    <div class="card-content">
+                                        <div class="info">
+                                            <span class="label">RAM Usage</span>
+                                            <span id="stat-ram" class="value">--</span>
+                                        </div>
+                                        <div class="progress-container" id="radial-ram">
+                                            <svg width="50" height="50">
+                                                <circle class="track" cx="25" cy="25" r="20"></circle>
+                                                <circle class="progress-bar" cx="25" cy="25" r="20" style="stroke-dasharray: 125.6; stroke-dashoffset: 125.6;"></circle>
+                                            </svg>
+                                            <div class="percentage-text">--%</div>
+                                        </div>
+                                    </div>
+                                    <div class="sparkline-container" id="ram-sparkline"></div>
+                                </div>
+                                <div class="status-card">
+                                    <div class="card-content">
+                                        <div class="info">
+                                            <span class="label">Disk</span>
+                                            <span id="stat-disk" class="value">--</span>
+                                        </div>
+                                        <div class="progress-container" id="radial-disk">
+                                            <svg width="50" height="50">
+                                                <circle class="track" cx="25" cy="25" r="20"></circle>
+                                                <circle class="progress-bar" cx="25" cy="25" r="20" style="stroke-dasharray: 125.6; stroke-dashoffset: 125.6;"></circle>
+                                            </svg>
+                                            <div class="percentage-text">--%</div>
+                                        </div>
+                                    </div>
+                                    <div class="sparkline-container" id="disk-sparkline"></div>
+                                </div>
+                                <div class="status-card">
+                                    <span class="label">Private IP</span>
+                                    <span id="stat-local-ip" class="value" style="font-size: 0.95rem;">--</span>
+                                </div>
+                                <div class="status-card">
+                                    <span class="label">Connectivity</span>
+                                    <span id="stat-internet" class="value" style="font-size: 0.95rem;">--</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="panel logs-panel">
+                            <h2><i data-lucide="file-text" class="icon"></i> Incident Logs</h2>
+                            <div id="logs-container" class="logs-list">
+                                <div class="empty-msg">No alerts triggered yet.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- System Information Module -->
+            <section id="system-module" class="module-section hidden">
+                <div class="module-header">
+                    <h1>System Command Center</h1>
+                    <span id="uptime-display" class="uptime-badge">Uptime: --</span>
+                </div>
+
+                <!-- Toolbox Grid -->
+                <div class="toolbox-grid">
+                    <!-- Row 1: Core Metrics -->
+                    <div class="tool-card" onclick="toggleToolInfo('mem')" title="Inspect RAM and Swap usage">
+                        <i data-lucide="database" class="icon"></i>
+                        <span>Memory Analysis</span>
+                        <small class="tool-desc">RAM & Swap metrics</small>
+                    </div>
+                    <div class="tool-card" onclick="toggleToolInfo('cpu-proc')" title="View top CPU consuming processes">
+                        <i data-lucide="cpu" class="icon"></i>
+                        <span>CPU Processes</span>
+                        <small class="tool-desc">Live process telemetry</small>
+                    </div>
+                    <div class="tool-card" onclick="toggleToolInfo('disk-usage')" title="Audit local disk storage">
+                        <i data-lucide="hard-drive" class="icon"></i>
+                        <span>Storage Audit</span>
+                        <small class="tool-desc">Partition health check</small>
+                    </div>
+                    <div class="tool-card" onclick="toggleToolInfo('largest-file')" title="Find enormous files on disk">
+                        <i data-lucide="folder" class="icon"></i>
+                        <span>Volume Scan</span>
+                        <small class="tool-desc">Target high-capacity files</small>
+                    </div>
+                    
+                    <!-- Row 2: Search & Info -->
+                    <div class="tool-card" onclick="toggleToolInfo('find-word')" title="Search for keywords inside files">
+                        <i data-lucide="search" class="icon"></i>
+                        <span>Pattern Search</span>
+                        <small class="tool-desc">Grep-like string search</small>
+                    </div>
+                    <div class="tool-card" onclick="toggleToolInfo('find-file')" title="Locate specific filenames">
+                        <i data-lucide="file-search" class="icon"></i>
+                        <span>File Locator</span>
+                        <small class="tool-desc">Find binary or text assets</small>
+                    </div>
+                    <div class="tool-card" onclick="toggleToolInfo('sys-details')" title="Hardware and Kernel specs">
+                        <i data-lucide="info" class="icon"></i>
+                        <span>System Specs</span>
+                        <small class="tool-desc">Metadata & Environment</small>
+                    </div>
+                    <div class="tool-card" onclick="toggleToolInfo('health')" title="Quick vitals check">
+                        <i data-lucide="activity" class="icon"></i>
+                        <span>Health Check</span>
+                        <small class="tool-desc">Metric validation suite</small>
+                    </div>
+
+                    <!-- Row 3: Admin Tools -->
+                    <div class="tool-card" onclick="toggleToolInfo('net-restart')" title="Re-initialize network interfaces">
+                        <i data-lucide="refresh-cw" class="icon"></i>
+                        <span>Network Reset</span>
+                        <small class="tool-desc">Admin protocol restart</small>
+                    </div>
+                    <div class="tool-card" onclick="toggleToolInfo('speedtest')" title="Check WAN speed">
+                        <i data-lucide="zap" class="icon"></i>
+                        <span>Performance Test</span>
+                        <small class="tool-desc">Bandwidth diagnostics</small>
+                    </div>
+                    <div class="tool-card" onclick="toggleToolInfo('services')" title="Manage system daemons">
+                        <i data-lucide="settings" class="icon"></i>
+                        <span>Service Manager</span>
+                        <small class="tool-desc">Analyze active units</small>
+                    </div>
+                    <div class="tool-card" onclick="toggleToolInfo('ports')" title="Check listening ports">
+                        <i data-lucide="plug" class="icon"></i>
+                        <span>Port Scanner</span>
+                        <small class="tool-desc">Socket audit discovery</small>
+                    </div>
+                    <div class="tool-card" onclick="toggleToolInfo('logs')" title="Parse system logs">
+                        <i data-lucide="file-text" class="icon"></i>
+                        <span>Log Analyzer</span>
+                        <small class="tool-desc">Heuristic journal parse</small>
+                    </div>
+                    <div class="tool-card" onclick="toggleToolInfo('firewall')" title="Inspect UFW policy">
+                        <i data-lucide="shield" class="icon"></i>
+                        <span>Firewall Policy</span>
+                        <small class="tool-desc">Security rule audit</small>
+                    </div>
+                </div>
+
+                <!-- Tool Info Pane (Dynamic) -->
+                <div id="tool-info-container" class="hidden">
+                    <div class="panel tool-info-pane">
+                        <div id="tool-info-content"></div>
+                        <div id="tool-action-area" style="margin-top: 1.5rem; display: flex; gap: 1rem;"></div>
+                    </div>
+                </div>
+
+                <!-- Global Result Display Area -->
+                <div id="system-result-area" class="result-display-area">
+                    <!-- Results will be injected here -->
+                </div>
+            </section>
+            <!-- Network Tools Module -->
+            <section id="network-module" class="module-section hidden">
+                <h1>Network Command Center</h1>
+                
+                <div class="dashboard-grid">
+                    <div class="status-column">
+                        <div class="panel network-info-panel">
+                            <h2><i data-lucide="globe" class="icon"></i> Global Identity</h2>
+                            <div id="network-details" class="details-list">
+                                <div class="detail-item">
+                                    <span class="label">Hostname</span>
+                                    <span id="net-hostname" class="value">--</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="label">Local IP</span>
+                                    <span id="net-local-ip" class="value">--</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="label">Public IP</span>
+                                    <span id="net-public-ip-networks" class="value">--</span>
+                                </div>
+                            </div>
+                            <div id="interfaces-list" class="interfaces-grid" style="margin-top: 1rem;"></div>
+                        </div>
+
+                        <div class="panel speedtest-panel">
+                            <h2><i data-lucide="zap" class="icon"></i> Bandwidth Analysis</h2>
+                            <button id="speedtest-btn" class="btn-primary w-full" onclick="runSpeedTest()">Run Speed Test</button>
+                            <div id="speedtest-result" class="speed-result">
+                                <pre id="speed-output">Ready to test...</pre>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="tools-column">
+                        <!-- Integrated SSH Terminal -->
+                        <div class="panel ssh-terminal-window" style="height: 100%; display: flex; flex-direction: column;">
+                            <h2><i data-lucide="terminal" class="icon"></i> Remote Shell Session</h2>
+                            
+                            <div id="ssh-setup" class="ssh-setup-form">
+                                <div class="config-group">
+                                    <label>Remote Host / IP</label>
+                                    <input type="text" id="ssh-host" placeholder="127.0.0.1">
+                                </div>
+                                <div class="dual-input">
+                                    <div class="config-group">
+                                        <label>Username</label>
+                                        <input type="text" id="ssh-user" placeholder="root">
+                                    </div>
+                                    <div class="config-group">
+                                        <label>Password</label>
+                                        <input type="password" id="ssh-pass" placeholder="••••••••">
+                                    </div>
+                                </div>
+                                <button class="btn-primary w-full" onclick="connectSSH()">Initiate Secure Session</button>
+                            </div>
+
+                            <div id="ssh-terminal-container" class="terminal-container hidden" style="flex: 1;">
+                                <div id="ssh-output" class="terminal-output">
+                                    <div class="term-line">SysTool Unified Terminal v1.0</div>
+                                </div>
+                                <div class="terminal-input-line">
+                                    <span class="prompt">$</span>
+                                    <input type="text" id="ssh-cmd-input" placeholder="ls -la" onkeydown="if(event.key === 'Enter') sendSSHCommand()">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="tool-row" style="margin-top: 2rem;">
+                            <div class="panel ping-panel">
+                                <h2><i data-lucide="wifi" class="icon"></i> Latency Diagnostic</h2>
+                                <div class="input-group">
+                                    <input type="text" id="ping-host" placeholder="google.com" value="google.com">
+                                    <button class="btn-secondary" onclick="runPing()">Ping</button>
+                                </div>
+                                <pre id="ping-output" class="tool-output">--</pre>
+                            </div>
+
+                            <div class="panel port-panel">
+                                <h2><i data-lucide="link" class="icon"></i> Port Auditor</h2>
+                                <div class="input-group">
+                                    <input type="text" id="port-host" placeholder="localhost" value="localhost">
+                                    <input type="number" id="port-number" placeholder="80" value="80">
+                                    <button class="btn-secondary" onclick="checkPort()">Check</button>
+                                </div>
+                                <div id="port-result" class="port-status">--</div>
+                            </div>
+                        </div>
+
+                        <div class="panel" style="margin-top: 2rem;">
+                            <h2><i data-lucide="zap" class="icon"></i> Network Recovery & Optimization</h2>
+                            <p class="text-secondary" style="font-size: 0.85rem; margin-bottom: 1.5rem;">
+                                Automated tools to restore connectivity or optimize packet flow.
+                            </p>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+                                <button class="btn-secondary" onclick="runHardNetworkRestart()" title="Restarts Network Manager service">
+                                    <i data-lucide="refresh-cw" class="icon" style="width:14px; margin-right:5px"></i> Hard Restart
+                                </button>
+                                <button class="btn-secondary" onclick="runSafeNetworkFix()" title="Cycles networking stack without process restart">
+                                    <i data-lucide="shield" class="icon" style="width:14px; margin-right:5px"></i> Safe Hard Fix
+                                </button>
+                                <button class="btn-primary" onclick="runNetworkOptimize()" title="Flushes DNS and optimizes TCP stack">
+                                    <i data-lucide="trending-up" class="icon" style="width:14px; margin-right:5px"></i> Optimize Speed
+                                </button>
+                            </div>
+                            <div id="network-tool-output" class="tool-output hidden" style="margin-top:1.5rem; background: var(--input-bg);"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Security Module -->
+            <section id="security-module" class="module-section hidden">
+                <h1>Security Operations Center</h1>
+                
+                <div class="dashboard-grid">
+                    <div class="status-column">
+                        <div class="panel">
+                            <h2><i data-lucide="shield-check" class="icon"></i> Compliance Audit</h2>
+                            <p class="text-secondary" style="font-size: 0.85rem; margin-bottom: 1rem;">
+                                Quick check for system vulnerabilities and misconfigurations.
+                            </p>
+                            <button class="btn-primary w-full" onclick="runSecurityAudit()">Run System Audit</button>
+                            <div id="audit-results" class="list-container interactive-list" style="margin-top: 1.5rem;">
+                                <div class="empty-msg">No audit performed yet.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="config-column">
+                        <div class="panel">
+                            <h2><i data-lucide="search" class="icon"></i> Threat Vector Scan</h2>
+                            <div class="input-group">
+                                <input type="text" id="scan-path" placeholder="/home/rakshith" value="/home/rakshith">
+                                <button id="scan-btn" class="btn-secondary" onclick="runMalwareScan()">Scan for Malware</button>
+                            </div>
+                            <div id="scan-status" class="empty-msg" style="padding: 1rem 0;">Ready to scan...</div>
+                            
+                            <div id="scan-results" class="results-list" style="margin-top: 1rem;"></div>
+
+                            <div id="clamav-missing" class="suggestion-box hidden" style="margin-top: 2rem;">
+                                <p><strong>ClamAV not found!</strong> Malware scanning requires ClamAV.</p>
+                                <code>sudo apt update && sudo apt install clamav -y</code>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            <section id="ai-module" class="module-section hidden">
+                <div class="ai-experience-wrapper">
+                    <div class="module-header">
+                        <h1>AI System Troubleshooter</h1>
+                        <span class="uptime-badge">Powered by Local Ollama</span>
+                    </div>
+
+                <div class="dashboard-grid" style="grid-template-columns: 1fr 2fr;">
+                    <!-- Column 1: Input -->
+                    <div class="panel">
+                        <h2><i data-lucide="message-square" class="icon"></i> Describe Issue</h2>
+                        <div class="config-section">
+                            <textarea id="ai-input" placeholder="e.g., Internet is slow, system is hanging, or cannot connect to SSH..." 
+                                style="width:100%; height:150px; background:var(--input-bg); color:var(--text-primary); border:1px solid var(--border-color); border-radius:8px; padding:1rem; font-family:inherit; resize:none;"></textarea>
+                            <button id="ai-analyze-btn" class="btn-primary" style="width:100%; margin-top:1rem;" onclick="analyzeIssue()">
+                                <i data-lucide="sparkles" class="icon" style="width:16px; height:16px; vertical-align:middle; margin-right:8px;"></i>
+                                Analyze Issue
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Column 2: Results -->
+                    <div id="ai-result-area" class="panel" style="min-height:300px;">
+                        <div class="empty-msg" style="margin-top:4rem;">
+                            <i data-lucide="bot" style="width:48px; height:48px; opacity:0.2; margin-bottom:1rem;"></i>
+                            <p>Enter a system issue and click "Analyze" to begin troubleshooting.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+    <div id="resource-picker-modal" class="modal-overlay hidden">
+        <div class="modal-content ssh-terminal-window">
+            <div class="modal-header">
+                <h2 id="picker-title">Select Resource</h2>
+                <button class="close-btn" onclick="closeResourcePicker()">&times;</button>
+            </div>
+            <div class="picker-container">
+                <input type="text" id="picker-search" class="search-mini" placeholder="Search apps or services..." oninput="filterInventory()">
+                <div id="inventory-list" class="inventory-grid">
+                    <div class="empty-msg">Loading inventory...</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-primary" onclick="confirmResourceSelection()">Done</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
