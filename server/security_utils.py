@@ -106,3 +106,73 @@ def run_security_audit():
     except: pass
 
     return results
+
+def run_network_security_scan():
+    """Detects active external connections and flags potentially suspicious public IP connections."""
+    results = []
+    suspicious_count = 0
+    external_count = 0
+    
+    try:
+        # Use ss to get established TCP connections
+        out = subprocess.run(['ss', '-tnp', 'state', 'established'], capture_output=True, text=True)
+        lines = out.stdout.split('\n')[1:] # Skip header
+        
+        for line in lines:
+            if not line.strip(): continue
+            parts = line.split()
+            if len(parts) >= 5:
+                peer_addr = parts[4]
+                
+                # Extract IP from peer (strip port)
+                ip = peer_addr.rsplit(':', 1)[0].replace('[', '').replace(']', '')
+                
+                # Check if it's local
+                if any(ip.startswith(prefix) for prefix in ['127.', '192.168.', '10.', '0.', '::1']):
+                    continue
+                if ip.startswith('172.'):
+                    try:
+                        if 16 <= int(ip.split('.')[1]) <= 31: continue
+                    except: pass
+                
+                # External connection found
+                external_count += 1
+                status = "INFO"
+                suggestion = f"Active connection to {ip}"
+                
+                # Basic heuristic for suspicious port
+                port = peer_addr.rsplit(':', 1)[1] if ':' in peer_addr else ''
+                if port not in ['443', '80', '22', '53', '123']:
+                    status = "WARNING"
+                    suggestion = f"Non-standard active connection port ({port}) to {ip}. Verify process."
+                    suspicious_count += 1
+                
+                proc = parts[5] if len(parts) > 5 else "Unknown"
+                
+                results.append({
+                    "check": "External Connection",
+                    "target": peer_addr,
+                    "status": status,
+                    "suggestion": suggestion + f" [{proc}]",
+                    "fix_command": f"echo 'Review connection. Kill if bad.'"
+                })
+    except Exception as e:
+        results.append({
+            "check": "Network Scan Tool",
+            "target": "ss command",
+            "status": "FAIL",
+            "suggestion": "Could not execute network scan tools. (" + str(e) + ")",
+            "fix_command": ""
+        })
+
+    if external_count == 0:
+        results.append({
+            "check": "External Connections",
+            "target": "Network",
+            "status": "PASS",
+            "suggestion": "No active external connections found.",
+            "fix_command": ""
+        })
+
+    return results
+

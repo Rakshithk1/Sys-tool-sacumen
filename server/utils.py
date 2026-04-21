@@ -151,27 +151,71 @@ def safe_network_fix():
 
 def optimize_network():
     """Flushes DNS and applies best-practice TCP optimizations."""
-    results = []
+    actions = []
     
-    # 1. Flush DNS Cache
+    # 1. Flush DNS Cache (often doesn't need root in modern systemd)
     try:
-        subprocess.run(['sudo', '-n', 'resolvectl', 'flush-caches'], check=True)
-        results.append("DNS cache flushed.")
+        subprocess.run(['resolvectl', 'flush-caches'], check=True, capture_output=True)
+        actions.append("DNS cache cleared")
     except:
         try:
-            subprocess.run(['sudo', '-n', 'systemd-resolve', '--flush-caches'], check=True)
-            results.append("DNS cache flushed.")
+            subprocess.run(['systemd-resolve', '--flush-caches'], check=True, capture_output=True)
+            actions.append("DNS cache cleared")
         except:
-            results.append("DNS flush failed (possibly not using systemd-resolved).")
+            pass
 
-    # 2. TCP Fast Open (safe speedup)
+    # 2. Rescan WiFi
     try:
-        subprocess.run(['sudo', '-n', 'sysctl', '-w', 'net.ipv4.tcp_fastopen=3'], check=True)
-        results.append("TCP FastOpen enabled.")
+        subprocess.run(['nmcli', 'dev', 'wifi', 'rescan'], check=True, capture_output=True)
+        actions.append("Wireless networks rescanned")
     except:
-        results.append("TCP optimization failed.")
+        pass
+        
+    if not actions:
+        actions.append("No network optimizations could be applied automatically.")
 
-    return True, " / ".join(results)
+    return {
+        "type": "network",
+        "actions": actions,
+        "status": "success"
+    }
+
+def optimize_system():
+    """Perform safe system cleaning commands to optimize performance."""
+    actions = []
+    
+    # 1. User Application Cache
+    try:
+        cache_path = os.path.expanduser('~/.cache')
+        if os.path.exists(cache_path):
+            subprocess.run(['find', cache_path, '-type', 'f', '-atime', '+7', '-delete'], check=True, capture_output=True)
+            actions.append("Stale application caches cleared")
+    except:
+        pass
+        
+    # 2. Sync Disks
+    try:
+        subprocess.run(['sync'], check=True, capture_output=True)
+        actions.append("Filesystem buffers synchronized")
+    except:
+        pass
+        
+    # 3. Clean user-owned temporary files older than 1 day
+    try:
+        username = os.environ.get('USER', 'root')
+        subprocess.run(['find', '/tmp', '-user', username, '-type', 'f', '-atime', '+1', '-delete'], check=True, capture_output=True)
+        actions.append("Inactive temporary files removed")
+    except:
+        pass
+        
+    if not actions:
+        actions.append("No system optimizations could be applied automatically.")
+
+    return {
+        "type": "system",
+        "actions": actions,
+        "status": "success"
+    }
 
 def get_largest_files(path, n=5):
     if not os.path.exists(path):

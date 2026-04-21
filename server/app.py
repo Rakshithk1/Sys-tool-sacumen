@@ -7,7 +7,8 @@ import subprocess
 import utils
 import paramiko
 import json
-from security_utils import run_malware_scan, run_security_audit
+from security_utils import run_malware_scan, run_security_audit, run_network_security_scan
+import windows_utils
 
 app = Flask(__name__, static_folder='../client')
 CORS(app)
@@ -59,6 +60,93 @@ def start_monitor():
 def stop_monitor():
     engine.stop()
     return jsonify({"message": "Monitoring stopped"})
+
+# --- OS Info & Cross-Platform Endpoints ---
+
+@app.route('/api/os_info', methods=['GET'])
+def os_info():
+    return jsonify(windows_utils.get_os_info())
+
+@app.route('/api/windows/metrics', methods=['GET'])
+def win_metrics():
+    return jsonify(windows_utils.get_windows_metrics())
+
+@app.route('/api/windows/processes', methods=['GET'])
+def win_processes():
+    return jsonify(windows_utils.get_windows_processes())
+
+@app.route('/api/windows/services', methods=['GET'])
+def win_services():
+    return jsonify(windows_utils.get_windows_services())
+
+@app.route('/api/windows/network', methods=['GET'])
+def win_network():
+    return jsonify(windows_utils.get_windows_network())
+
+@app.route('/api/windows/cleanup_temp', methods=['POST'])
+def win_cleanup():
+    return jsonify(windows_utils.cleanup_windows_temp())
+
+@app.route('/api/windows/unified_sysinfo', methods=['GET'])
+def win_unified_sysinfo():
+    return jsonify(windows_utils.get_unified_sysinfo())
+
+# --- Linux SSH & File Transfer Endpoints ---
+
+@app.route('/api/linux/ssh_status', methods=['GET'])
+def linux_ssh_status():
+    try:
+        # Check if anything is listening on port 22
+        output = subprocess.check_output("ss -tulnp | grep :22", shell=True, text=True)
+        return jsonify({"active": True, "output": output.strip()})
+    except subprocess.CalledProcessError:
+        return jsonify({"active": False, "message": "SSH port 22 is not active."})
+
+@app.route('/api/linux/ssh_enable', methods=['POST'])
+def linux_ssh_enable():
+    try:
+        subprocess.run("sudo systemctl start ssh", shell=True, check=True)
+        subprocess.run("sudo systemctl enable ssh", shell=True, check=True)
+        return jsonify({"success": True, "message": "SSH service started and enabled."})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/linux/transfer', methods=['POST'])
+def linux_transfer():
+    data = request.json
+    mode = data.get('mode') # 'send' or 'receive'
+    use_rsync = data.get('rsync', False)
+    
+    file_path = data.get('filePath')
+    remote_user = data.get('user')
+    remote_ip = data.get('ip')
+    dest_path = data.get('destPath')
+    
+    if not all([file_path, remote_user, remote_ip, dest_path]):
+        return jsonify({"error": "Missing transfer parameters"}), 400
+
+    # Build command
+    # Note: For production, we'd use Paramiko or handle password prompts via PTY.
+    # For now, we assume public key auth or simple background execution for the exercise.
+    base_cmd = "rsync -avz" if use_rsync else "scp -r"
+    
+    if mode == 'send':
+        cmd = f"{base_cmd} {file_path} {remote_user}@{remote_ip}:{dest_path}"
+    else: # receive
+        cmd = f"{base_cmd} {remote_user}@{remote_ip}:{file_path} {dest_path}"
+
+    try:
+        # In a real app, this should be async or stream output. 
+        # Here we run it and return the result.
+        result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=60)
+        return jsonify({
+            "success": result.returncode == 0,
+            "stdout": result.stdout,
+            "stderr": result.stderr,
+            "cmd": cmd
+        })
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
 
 # --- New Tools Endpoints ---
 
@@ -149,8 +237,11 @@ def net_safe_fix():
 
 @app.route('/api/network/optimize', methods=['POST'])
 def net_optimize():
-    success, msg = utils.optimize_network()
-    return jsonify({"success": success, "message": msg}), 200 if success else 500
+    return jsonify(utils.optimize_network())
+
+@app.route('/api/system/optimize', methods=['POST'])
+def sys_optimize():
+    return jsonify(utils.optimize_system())
 
 @app.route('/api/tools/firewall', methods=['GET'])
 def get_firewall():
@@ -167,6 +258,25 @@ def get_logs_summary():
 @app.route('/api/tools/network_restart', methods=['POST'])
 def net_restart():
     return jsonify({"message": utils.restart_network()})
+@app.route('/api/ssh/test', methods=['POST'])
+def ssh_test():
+    data = request.json
+    host = data.get('host')
+    user = data.get('user')
+    password = data.get('password')
+    
+    if not all([host, user, password]):
+        return jsonify({"success": False, "error": "Missing credentials", "message": "Incomplete configuration"}), 400
+        
+    try:
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.connect(host, username=user, password=password, timeout=5)
+        ssh.close()
+        return jsonify({"success": True, "message": "Connection established successfully"})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e), "message": "Authentication failed"}), 500
+
 
 @app.route('/api/ssh/exec', methods=['POST'])
 def ssh_exec():
@@ -202,6 +312,11 @@ def security_scan():
 @app.route('/api/security/audit', methods=['GET'])
 def security_audit():
     return jsonify(run_security_audit())
+
+@app.route('/api/security/network_scan', methods=['GET'])
+def network_security_scan():
+    return jsonify(run_network_security_scan())
+
 
 @app.route('/api/security/fix', methods=['POST'])
 def security_fix():

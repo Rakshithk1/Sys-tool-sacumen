@@ -20,13 +20,33 @@
                 <li id="nav-security" onclick="switchTab('security')">Security</li>
                 <li id="nav-ai" onclick="switchTab('ai')">AI Assistant</li>
             </ul>
-            <div class="theme-switch-wrapper">
-                <i data-lucide="sun" class="icon theme-icon-sun"></i>
-                <label class="theme-switch" for="checkbox">
-                    <input type="checkbox" id="checkbox" onclick="toggleTheme()" />
-                    <div class="slider round"></div>
-                </label>
-                <i data-lucide="moon" class="icon theme-icon-moon"></i>
+
+            <div class="settings-stack">
+                <!-- Theme Multi-Toggle -->
+                <div class="toggle-container">
+                    <label class="switch theme-toggle">
+                        <input type="checkbox" id="theme-checkbox" onclick="toggleTheme()">
+                        <div class="slider round">
+                            <div class="thumb">
+                                <i data-lucide="sun" class="icon-sun"></i>
+                                <i data-lucide="moon" class="icon-moon"></i>
+                            </div>
+                        </div>
+                    </label>
+                </div>
+
+                <!-- OS Multi-Toggle -->
+                <div class="toggle-container">
+                    <label class="switch os-toggle" title="Switch Operating System Mode">
+                        <input type="checkbox" id="os-checkbox" onclick="toggleOSMode()">
+                        <div class="slider round">
+                            <div class="thumb">
+                                <svg class="icon-win" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M0 11.422h11.238V0L0 1.543v9.879zm0 1.05v9.985L11.238 24V12.472H0zM12.31 0v11.422H24V3.296L12.31 0zm0 12.472V24l11.69-1.642V12.472H12.31z"/></svg>
+                                <svg class="icon-lin" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-2.3 0-4 1.7-4 4 0 .7.1 1.3.4 1.9-.3.3-.4.7-.4 1.1 0 .9.7 1.6 1.6 1.6.1 0 .3 0 .4-.1.7.9 1.8 1.5 3 1.5s2.3-.6 3-1.5c.1.1.3.1.4.1.9 0 1.6-.7 1.6-1.6 0-.4-.1-.8-.4-1.1.3-.6.4-1.2.4-1.9 0-2.3-1.7-4-4-4zm-4 13c-3 0-5.7 1.8-7 4.5l-.2.5H2l1-1c1-1 2.2-1.5 3.5-1.5 1.5 0 2.8.7 3.5 2 1 1.7 2.8 3 5 3s4-.1 5-3c.7-1.3 2-2 3.5-2 1.3 0 2.5.5 3.5 1.5l1 1h1.2l-.2-.5c-1.3-2.7-4-4.5-7-4.5h-8z"/></svg>
+                            </div>
+                        </div>
+                    </label>
+                </div>
             </div>
         </nav>
 
@@ -114,7 +134,36 @@
                     <!-- Column 2: Live Status & Logs -->
                     <div class="status-column">
                         <div class="panel status-panel">
-                            <h2><i data-lucide="activity" class="icon"></i> Real-time Analytics</h2>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                                <h2><i data-lucide="activity" class="icon"></i> Real-time Analytics</h2>
+                                <div class="optimizer-grid" style="margin: 0; gap: 1.5rem;">
+                                    <div class="optimizer-circle-container" onclick="triggerOptimization('network')" onmouseenter="showTooltip(this, 'Optimize Network')" onmouseleave="hideTooltip(this)" title="Optimize Network">
+                                        <div class="optimizer-circle state-neutral" id="opt-network-circle" style="width: 50px; height: 50px;">
+                                            <div class="circle-content" style="gap: 2px;">
+                                                <i data-lucide="zap" class="icon circle-icon" style="width: 18px; height: 18px; color: var(--accent-color);"></i>
+                                            </div>
+                                            <svg class="ring-svg" viewBox="0 0 100 100">
+                                                <circle class="base-ring" cx="50" cy="50" r="45"></circle>
+                                                <circle class="progress-ring" cx="50" cy="50" r="45"></circle>
+                                            </svg>
+                                        </div>
+                                        <div class="floating-text-container" id="float-network" style="top: -10px;"></div>
+                                    </div>
+
+                                    <div class="optimizer-circle-container" onclick="triggerOptimization('system')" onmouseenter="showTooltip(this, 'Optimize System')" onmouseleave="hideTooltip(this)" title="Optimize System">
+                                        <div class="optimizer-circle state-neutral" id="opt-system-circle" style="width: 50px; height: 50px;">
+                                            <div class="circle-content" style="gap: 2px;">
+                                                <i data-lucide="cpu" class="icon circle-icon" style="width: 18px; height: 18px; color: var(--accent-color);"></i>
+                                            </div>
+                                            <svg class="ring-svg" viewBox="0 0 100 100">
+                                                <circle class="base-ring" cx="50" cy="50" r="45"></circle>
+                                                <circle class="progress-ring" cx="50" cy="50" r="45"></circle>
+                                            </svg>
+                                        </div>
+                                        <div class="floating-text-container" id="float-system" style="top: -10px;"></div>
+                                    </div>
+                                </div>
+                            </div>
                             
                             <!-- Restore Session Sub-Section -->
                             <div class="restore-session-pane">
@@ -302,10 +351,10 @@
                         <span>Log Analyzer</span>
                         <small class="tool-desc">Heuristic journal parse</small>
                     </div>
-                    <div class="tool-card" onclick="toggleToolInfo('firewall')" title="Inspect UFW policy">
-                        <i data-lucide="shield" class="icon"></i>
-                        <span>Firewall Policy</span>
-                        <small class="tool-desc">Security rule audit</small>
+                    <div class="tool-card" onclick="toggleToolInfo('file-transfer')" title="Transfer files between systems">
+                        <i data-lucide="share" class="icon"></i>
+                        <span>File Transfer</span>
+                        <small class="tool-desc">SCP & Rsync gateway</small>
                     </div>
                 </div>
 
@@ -358,8 +407,11 @@
 
                     <div class="tools-column">
                         <!-- Integrated SSH Terminal -->
-                        <div class="panel ssh-terminal-window" style="height: 100%; display: flex; flex-direction: column;">
-                            <h2><i data-lucide="terminal" class="icon"></i> Remote Shell Session</h2>
+                        <div class="panel ssh-terminal-window" style="height: 350px; display: flex; flex-direction: column; position: relative;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <h2><i data-lucide="terminal" class="icon"></i> Remote Shell Session</h2>
+                                <button id="ssh-disconnect-btn" class="btn-secondary hidden" onclick="disconnectSSH()" style="padding: 0.2rem 0.5rem; font-size: 0.8rem;">Disconnect</button>
+                            </div>
                             
                             <div id="ssh-setup" class="ssh-setup-form">
                                 <div class="config-group">
@@ -467,9 +519,146 @@
                                 <code>sudo apt update && sudo apt install clamav -y</code>
                             </div>
                         </div>
+
+                        <div class="panel" style="margin-top: 2rem;">
+                            <h2><i data-lucide="shield-alert" class="icon"></i> Network Security Scan</h2>
+                            <p class="text-secondary" style="font-size: 0.85rem; margin-bottom: 1rem;">
+                                Advanced scan for external connections and suspicious IPs.
+                            </p>
+                            <button class="btn-primary w-full" onclick="runNetworkSecurityScan()">Detect Connections</button>
+                            <div id="network-scan-results" class="list-container interactive-list" style="margin-top: 1.5rem;">
+                                <div class="empty-msg">No network scan performed yet.</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>
+
+            <!-- Windows Module -->
+            <section id="windows-module" class="module-section hidden">
+                <div class="module-header">
+                    <h1>
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="28" height="28" fill="currentColor" style="vertical-align:middle; margin-right:8px;"><path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.9-1.801"/></svg>
+                        Windows System Tools
+                    </h1>
+                    <span class="uptime-badge" id="win-connection-badge">Connecting...</span>
+                </div>
+
+                <!-- Metrics Row -->
+                <div class="win-metrics-grid" id="win-metrics-grid">
+                    <div class="win-metric-card">
+                        <div class="win-metric-icon"><i data-lucide="cpu" class="icon"></i></div>
+                        <div class="win-metric-info">
+                            <span class="win-metric-label">CPU Usage</span>
+                            <span class="win-metric-value" id="win-cpu">--</span>
+                        </div>
+                        <div class="win-metric-bar"><div class="win-bar-fill" id="win-cpu-bar" style="width:0%"></div></div>
+                    </div>
+                    <div class="win-metric-card">
+                        <div class="win-metric-icon"><i data-lucide="memory-stick" class="icon"></i></div>
+                        <div class="win-metric-info">
+                            <span class="win-metric-label">RAM Usage</span>
+                            <span class="win-metric-value" id="win-ram">--</span>
+                        </div>
+                        <div class="win-metric-bar"><div class="win-bar-fill" id="win-ram-bar" style="width:0%"></div></div>
+                    </div>
+                    <div class="win-metric-card">
+                        <div class="win-metric-icon"><i data-lucide="hard-drive" class="icon"></i></div>
+                        <div class="win-metric-info">
+                            <span class="win-metric-label">Disk Usage</span>
+                            <span class="win-metric-value" id="win-disk">--</span>
+                        </div>
+                        <div class="win-metric-bar"><div class="win-bar-fill" id="win-disk-bar" style="width:0%"></div></div>
+                    </div>
+                    <div class="win-metric-card">
+                        <div class="win-metric-icon"><i data-lucide="zap" class="icon"></i></div>
+                        <div class="win-metric-info">
+                            <span class="win-metric-label">Temp Cleanup</span>
+                            <span class="win-metric-value" style="font-size:0.8rem;">One-click clean</span>
+                        </div>
+                        <button class="btn-primary" style="margin-top:0.5rem; width:100%; font-size:0.8rem;" onclick="cleanWindowsTemp()">Clean Now</button>
+                    </div>
+                </div>
+
+                <!-- Unified System Information Panel (Windows) -->
+                <div class="panel" style="margin-top: 1.5rem;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                        <h2><i data-lucide="info" class="icon"></i> Unified System Information</h2>
+                        <button class="btn-primary" style="font-size:0.85rem; padding:0.4rem 1rem;" onclick="loadWinUnifiedInfo()">Full System Audit</button>
+                    </div>
+                    <div class="win-info-grid">
+                        <div class="win-info-card">
+                            <h3><i data-lucide="cpu" class="icon"></i> Hardware</h3>
+                            <div id="win-hw-content" class="win-info-list">
+                                <div class="empty-msg">Perform audit to load...</div>
+                            </div>
+                        </div>
+                        <div class="win-info-card">
+                            <h3><i data-lucide="monitor" class="icon"></i> OS & Build</h3>
+                            <div id="win-os-content" class="win-info-list">
+                                <div class="empty-msg">Perform audit to load...</div>
+                            </div>
+                        </div>
+                        <div class="win-info-card">
+                            <h3><i data-lucide="network" class="icon"></i> Network Identity</h3>
+                            <div id="win-net-content" class="win-info-list">
+                                <div class="empty-msg">Perform audit to load...</div>
+                            </div>
+                        </div>
+                        <div class="win-info-card">
+                            <h3><i data-lucide="shield" class="icon"></i> Security & Status</h3>
+                            <div id="win-stat-content" class="win-info-list">
+                                <div class="empty-msg">Perform audit to load...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dashboard-grid" style="margin-top: 1.5rem;">
+                    <!-- Processes Column -->
+                    <div class="status-column">
+                        <div class="panel">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                                <h2><i data-lucide="layers" class="icon"></i> Running Processes</h2>
+                                <button class="btn-secondary" style="font-size:0.8rem; padding:0.3rem 0.7rem;" onclick="loadWinProcesses()">↻ Refresh</button>
+                            </div>
+                            <div id="win-processes-list" class="list-container">
+                                <div class="empty-msg">Click Refresh to load processes.</div>
+                            </div>
+                        </div>
+
+                        <div class="panel" style="margin-top:1.5rem;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                                <h2><i data-lucide="settings" class="icon"></i> Windows Services</h2>
+                                <button class="btn-secondary" style="font-size:0.8rem; padding:0.3rem 0.7rem;" onclick="loadWinServices()">↻ Refresh</button>
+                            </div>
+                            <div id="win-services-list" class="list-container">
+                                <div class="empty-msg">Click Refresh to load services.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Network Column -->
+                    <div class="config-column">
+                        <div class="panel">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                                <h2><i data-lucide="globe" class="icon"></i> Network (ipconfig)</h2>
+                                <button class="btn-secondary" style="font-size:0.8rem; padding:0.3rem 0.7rem;" onclick="loadWinNetwork()">↻ Refresh</button>
+                            </div>
+                            <pre id="win-network-output" class="tool-output" style="max-height:400px; overflow-y:auto;">Click Refresh to load network info.</pre>
+                        </div>
+
+                        <div class="panel" id="win-no-data-panel" style="margin-top:1.5rem; display:none;">
+                            <div style="text-align:center; padding: 2rem; color: var(--text-secondary);">
+                                <i data-lucide="alert-triangle" style="width:40px; height:40px; opacity:0.4; margin-bottom:1rem;"></i>
+                                <p><strong>Windows PowerShell not available</strong></p>
+                                <p style="font-size:0.85rem; margin-top:0.5rem;">This tool requires WSL with Windows interop enabled. Process and service data cannot be retrieved from this server.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
             <section id="ai-module" class="module-section hidden">
                 <div class="ai-experience-wrapper">
                     <div class="module-header">

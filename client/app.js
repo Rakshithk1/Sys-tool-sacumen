@@ -1,6 +1,7 @@
 const API_BASE = "/api";
 let isMonitoring = false;
 let pollInterval = null;
+window.currentOS = 'linux'; // default, will be overridden on load
 
 const metricHistory = { cpu: [], ram: [], disk: [] };
 const MAX_HISTORY = 30;
@@ -8,25 +9,25 @@ const MAX_HISTORY = 30;
 // Theme Persistence & Logic
 function initializeTheme() {
     const theme = localStorage.getItem('theme');
-    const checkbox = document.getElementById('checkbox');
+    const checkbox = document.getElementById('theme-checkbox');
     if (theme === 'light') {
         document.body.classList.add('light-theme');
-        if (checkbox) checkbox.checked = false;
+        if (checkbox) checkbox.checked = true; // For our new light-on-checked logic
     } else {
         document.body.classList.remove('light-theme');
-        if (checkbox) checkbox.checked = true; // Default to dark (checked)
+        if (checkbox) checkbox.checked = false;
     }
 }
 
 function toggleTheme() {
-    const checkbox = document.getElementById('checkbox');
-    const isDark = checkbox.checked;
-    if (isDark) {
-        document.body.classList.remove('light-theme');
-        localStorage.setItem('theme', 'dark');
-    } else {
+    const checkbox = document.getElementById('theme-checkbox');
+    const isLight = checkbox.checked;
+    if (isLight) {
         document.body.classList.add('light-theme');
         localStorage.setItem('theme', 'light');
+    } else {
+        document.body.classList.remove('light-theme');
+        localStorage.setItem('theme', 'dark');
     }
 }
 
@@ -36,6 +37,7 @@ window.addEventListener('DOMContentLoaded', () => {
     loadConfig();
     startPolling();
     loadSessionProfile();
+    initOSMode(); // detect and apply OS mode
 });
 
 // Tab Switching
@@ -44,15 +46,264 @@ function switchTab(tab) {
     document.querySelectorAll('.module-section').forEach(sec => sec.classList.add('hidden'));
     
     document.getElementById(`nav-${tab}`).classList.add('active');
-    document.getElementById(`${tab}-module`).classList.remove('hidden');
+    const section = document.getElementById(`${tab}-module`);
+    section.classList.remove('hidden');
+    // Trigger fade-in animation
+    section.classList.remove('os-fade-in');
+    void section.offsetWidth; // force reflow
+    section.classList.add('os-fade-in');
     
     // Auto-refresh when entering tabs
     if (tab === 'system') updateExtendedSysInfo();
     if (tab === 'network') updateNetworkDetails();
     if (tab === 'security') runSecurityAudit();
+    if (tab === 'windows') loadWinMetrics();
 
     // Re-initialize Lucide icons for dynamic content
     if (window.lucide) lucide.createIcons();
+}
+
+/* ============================================================
+   OS MODE DETECTION & SWITCHING
+   ============================================================ */
+
+async function initOSMode() {
+    // 1. Check persistence or detect
+    const saved = localStorage.getItem('preferredOS');
+    let detectedOS;
+    
+    if (saved) {
+        detectedOS = saved;
+    } else {
+        const ua = navigator.userAgent || navigator.platform || '';
+        detectedOS = /Win/i.test(ua) ? 'windows' : 'linux';
+    }
+
+    // 2. Try to get server OS info for capability check
+    try {
+        const res = await fetch(`${API_BASE}/os_info`);
+        const data = await res.json();
+        window.serverOSInfo = data;
+    } catch(e) {
+        window.serverOSInfo = { windows_available: false };
+    }
+
+    // 3. Apply
+    setOSMode(detectedOS);
+}
+
+function setOSMode(os) {
+    const isInitializing = (window.currentOS === os && !document.body.classList.contains('win-mode') && !localStorage.getItem('preferredOS'));
+    window.currentOS = os;
+    const checkbox = document.getElementById('os-checkbox');
+    const body = document.body;
+    const currentSection = document.querySelector('.module-section:not(.hidden)');
+
+    // 1. Exit Animation for current section
+    if (currentSection && !isInitializing) {
+        currentSection.classList.add('os-anim-exit');
+    }
+
+    // 2. Short delay for exit animation to complete
+    setTimeout(() => {
+        if (os === 'windows') {
+            body.classList.add('win-mode');
+            if (checkbox) checkbox.checked = true;
+            
+            // Hide all and prepare target
+            document.querySelectorAll('.module-section').forEach(sec => {
+                sec.classList.add('hidden');
+                sec.classList.remove('os-anim-exit');
+            });
+            
+            const target = document.getElementById('windows-module');
+            target.classList.remove('hidden');
+            target.classList.add('os-anim-enter');
+            
+            // Trigger load
+            loadWinMetrics();
+            
+            // 3. Trigger Enter Animation
+            setTimeout(() => {
+                target.classList.remove('os-anim-enter');
+            }, 50);
+        } else {
+            body.classList.remove('win-mode');
+            if (checkbox) checkbox.checked = false;
+            
+            // Use switchTab logic but with animation support
+            document.querySelectorAll('.module-section').forEach(sec => {
+                sec.classList.add('hidden');
+                sec.classList.remove('os-anim-exit');
+            });
+            
+            // Defaut to monitoring for Linux
+            const target = document.getElementById('monitoring-module');
+            document.querySelectorAll('.nav-links li').forEach(li => li.classList.remove('active'));
+            document.getElementById('nav-monitoring').classList.add('active');
+            
+            target.classList.remove('hidden');
+            target.classList.add('os-anim-enter');
+            
+            setTimeout(() => {
+                target.classList.remove('os-anim-enter');
+            }, 50);
+        }
+
+        if (window.lucide) lucide.createIcons();
+    }, isInitializing ? 0 : 250);
+
+    localStorage.setItem('preferredOS', os);
+}
+
+function toggleOSMode() {
+    const checkbox = document.getElementById('os-checkbox');
+    setOSMode(checkbox.checked ? 'windows' : 'linux');
+}
+
+
+
+
+/* ============================================================
+   WINDOWS DATA-FETCHING FUNCTIONS
+   ============================================================ */
+
+async function loadWinMetrics() {
+    try {
+        const res = await fetch(`${API_BASE}/windows/metrics`);
+        const d = await res.json();
+
+        const badge = document.getElementById('win-connection-badge');
+        if (badge) { badge.innerText = 'Connected'; badge.style.background = 'rgba(16,185,129,0.15)'; badge.style.color = 'var(--success-color)'; }
+
+        const setMetric = (id, barId, val, label) => {
+            const el = document.getElementById(id);
+            const bar = document.getElementById(barId);
+            if (el) el.innerText = label || `${val}%`;
+            if (bar) bar.style.width = `${Math.min(val, 100)}%`;
+
+            // Color the bar based on value
+            if (bar) {
+                if (val > 85) bar.style.background = 'var(--danger-color)';
+                else if (val > 65) bar.style.background = 'var(--warning-color)';
+                else bar.style.background = '';
+            }
+        };
+
+        setMetric('win-cpu',  'win-cpu-bar',  d.cpu_percent,  `${d.cpu_percent}%`);
+        setMetric('win-ram',  'win-ram-bar',  d.ram_percent,  `${d.ram_used_gb}/${d.ram_total_gb} GB`);
+        setMetric('win-disk', 'win-disk-bar', d.disk_percent, `${d.disk_used_gb}/${d.disk_total_gb} GB`);
+
+    } catch(err) {
+        const badge = document.getElementById('win-connection-badge');
+        if (badge) { badge.innerText = 'Error'; badge.style.color = 'var(--danger-color)'; }
+    }
+}
+
+async function loadWinProcesses() {
+    const container = document.getElementById('win-processes-list');
+    container.innerHTML = '<div class="empty-msg">Loading...</div>';
+
+    try {
+        const res = await fetch(`${API_BASE}/windows/processes`);
+        const d = await res.json();
+
+        if (d.error) {
+            container.innerHTML = `<div class="os-no-data"><p><strong>Not Available</strong></p><p style="font-size:0.85rem;">${d.error}</p></div>`;
+            return;
+        }
+
+        container.innerHTML = '';
+        d.processes.forEach(p => {
+            const row = document.createElement('div');
+            row.className = 'win-proc-item';
+            row.innerHTML = `
+                <span class="win-proc-name" title="${p.name}">${p.name}</span>
+                <div class="win-proc-stats">
+                    <span class="win-proc-cpu">CPU: ${p.cpu}s</span>
+                    <span class="win-proc-mem">RAM: ${p.memory_mb} MB</span>
+                    <span style="color:var(--text-secondary); font-size:0.75rem;">PID ${p.pid}</span>
+                </div>
+            `;
+            container.appendChild(row);
+        });
+    } catch(err) {
+        container.innerHTML = '<div class="empty-msg">Failed to load processes.</div>';
+    }
+}
+
+async function loadWinServices() {
+    const container = document.getElementById('win-services-list');
+    container.innerHTML = '<div class="empty-msg">Loading...</div>';
+
+    try {
+        const res = await fetch(`${API_BASE}/windows/services`);
+        const d = await res.json();
+
+        if (d.error) {
+            container.innerHTML = `<div class="os-no-data"><p><strong>Not Available</strong></p><p style="font-size:0.85rem;">${d.error}</p></div>`;
+            return;
+        }
+
+        container.innerHTML = '';
+        // Show only first 15 for compact display
+        d.services.slice(0, 15).forEach(s => {
+            const statusStr = String(s.status);
+            const isRunning = statusStr.includes('4') || statusStr.toLowerCase() === 'running';
+            const row = document.createElement('div');
+            row.className = 'win-svc-item';
+            row.innerHTML = `
+                <span class="win-svc-name" title="${s.display}">${s.display || s.name}</span>
+                <span class="${isRunning ? 'win-svc-status-running' : 'win-svc-status-stopped'}">${isRunning ? 'Running' : 'Stopped'}</span>
+            `;
+            container.appendChild(row);
+        });
+    } catch(err) {
+        container.innerHTML = '<div class="empty-msg">Failed to load services.</div>';
+    }
+}
+
+async function loadWinNetwork() {
+    const pre = document.getElementById('win-network-output');
+    pre.innerText = 'Loading ipconfig...';
+
+    try {
+        const res = await fetch(`${API_BASE}/windows/network`);
+        const d = await res.json();
+
+        if (d.error) {
+            pre.innerText = `Not Available:\n${d.error}`;
+            return;
+        }
+        pre.innerText = d.raw;
+    } catch(err) {
+        pre.innerText = 'Failed to retrieve network info.';
+    }
+}
+
+async function cleanWindowsTemp() {
+    const btn = event.target;
+    const oldText = btn.innerText;
+    btn.innerText = 'Cleaning...';
+    btn.disabled = true;
+
+    try {
+        const res = await fetch(`${API_BASE}/windows/cleanup_temp`, { method: 'POST' });
+        const d = await res.json();
+        btn.innerText = '✓ Done';
+        setTimeout(() => { btn.innerText = oldText; btn.disabled = false; }, 3000);
+
+        // Show result briefly
+        const badge = document.getElementById('win-connection-badge');
+        if (badge && d.actions) {
+            const old = badge.innerText;
+            badge.innerText = d.actions.join(' · ');
+            setTimeout(() => badge.innerText = old, 4000);
+        }
+    } catch(err) {
+        btn.innerText = 'Failed';
+        btn.disabled = false;
+    }
 }
 
 // Configuration Persistence
@@ -268,7 +519,8 @@ const TOOL_METADATA = {
     'services': { title: 'Service Manager', desc: 'Listing of active system daemons and listening daemon processes.', btn: 'Analyze Services', func: () => runTool('services') },
     'ports': { title: 'Port Scanner', desc: 'Network interrogation for discovering open listening ports and socket states.', btn: 'Scan Sockets', func: () => runTool('ports') },
     'logs': { title: 'Log Analyzer', desc: 'Heuristic analysis of the latest kernel and system binary logs.', btn: 'Parse Logs', func: () => runTool('logs') },
-    'firewall': { title: 'Firewall Policy', desc: 'Audit of the current Uncomplicated Firewall (UFW) rules and active policies.', btn: 'Inspect Policy', func: () => runTool('firewall') }
+    'firewall': { title: 'Firewall Policy', desc: 'Audit of the current Uncomplicated Firewall (UFW) rules and active policies.', btn: 'Inspect Policy', func: () => runTool('firewall') },
+    'file-transfer': { title: 'File Transfer Gateway', desc: 'Transfer files or directories between Linux systems using secure SCP or optimized Rsync protocols.', btn: 'Initialize Gateway', func: () => initFileTransferUI() }
 };
 
 let currentActiveTool = null;
@@ -289,27 +541,55 @@ function toggleToolInfo(toolId) {
     // Lucide Icon mapping for the preview pane
     const iconName = document.querySelector(`[onclick="toggleToolInfo('${toolId}')"] [data-lucide]`)?.getAttribute('data-lucide') || 'settings';
 
-    content.innerHTML = `
-        <h2 style="margin-bottom:0.5rem; text-transform:none; color:var(--text-primary); font-size:1.1rem; letter-spacing:0">
-            <i data-lucide="${iconName}" style="width:20px; height:20px; vertical-align:text-bottom; margin-right:8px; color:var(--accent-color)"></i>
-            ${meta.title}
-        </h2>
-        <p style="font-size:0.9rem; color:var(--text-secondary); line-height:1.5">${meta.desc}</p>
-        ${meta.inputs ? `
-            <div class="input-group" style="margin-top:1.2rem">
-                ${meta.inputs.map(i => `<input type="text" id="${i.id}" placeholder="${i.label}" value="${i.val}">`).join('')}
+    // Special UI for File Transfer
+    if (toolId === 'file-transfer') {
+        content.innerHTML = `
+            <h2><i data-lucide="share" class="icon"></i> ${meta.title}</h2>
+            <p>${meta.desc}</p>
+            <div id="ssh-service-check-area" style="margin-top: 1rem;"></div>
+            <div id="transfer-ui-core" class="hidden" style="margin-top: 1.5rem;">
+                <div class="transfer-tabs">
+                    <div class="transfer-tab active" onclick="setTransferMode('send')">Send File</div>
+                    <div class="transfer-tab" onclick="setTransferMode('receive')">Receive File</div>
+                </div>
+                <div class="transfer-form">
+                    <div class="dual-input">
+                        <div class="config-group"><label>Remote IP</label><input type="text" id="tr-ip" placeholder="192.168.1.50"></div>
+                        <div class="config-group"><label>Username</label><input type="text" id="tr-user" placeholder="root"></div>
+                    </div>
+                    <div class="config-group"><label id="tr-path-label">Local File/Folder Path</label><input type="text" id="tr-path" placeholder="/home/user/data"></div>
+                    <div class="config-group"><label id="tr-dest-label">Remote Destination Path</label><input type="text" id="tr-dest" placeholder="/tmp"></div>
+                    <div style="display:flex; align-items:center; gap:0.5rem; margin-top:0.5rem;">
+                        <input type="checkbox" id="tr-rsync"> <label for="tr-rsync" style="font-size:0.85rem">Use Fast Transfer (Rsync)</label>
+                    </div>
+                </div>
+                <div id="tr-status-area" class="hidden"></div>
             </div>
-        ` : ''}
-    `;
-
-    actionArea.innerHTML = `
-        <button class="btn-primary" style="padding:0.6rem 1.2rem; font-size:0.85rem" onclick="TOOL_METADATA['${toolId}'].func()">
-            ${meta.btn}
-        </button>
-        <button class="btn-secondary" style="padding:0.6rem 1.2rem; font-size:0.85rem" onclick="document.getElementById('tool-info-container').classList.add('hidden')">
-            Deactivate
-        </button>
-    `;
+        `;
+        actionArea.innerHTML = `
+            <button id="tr-exec-btn" class="btn-primary hidden" onclick="confirmAndTransfer()">Execute Transfer</button>
+            <button class="btn-secondary" onclick="document.getElementById('tool-info-container').classList.add('hidden')">Close</button>
+        `;
+        checkSSHStatus();
+    } else {
+        content.innerHTML = `
+            <h2>${meta.title}</h2>
+            <p>${meta.desc}</p>
+            ${meta.inputs ? `
+                <div class="input-group" style="margin-top:1.2rem">
+                    ${meta.inputs.map(i => `<input type="text" id="${i.id}" placeholder="${i.label}" value="${i.val}">`).join('')}
+                </div>
+            ` : ''}
+        `;
+        actionArea.innerHTML = `
+            <button class="btn-primary" style="padding:0.6rem 1.2rem; font-size:0.85rem" onclick="TOOL_METADATA['${toolId}'].func()">
+                ${meta.btn}
+            </button>
+            <button class="btn-secondary" style="padding:0.6rem 1.2rem; font-size:0.85rem" onclick="document.getElementById('tool-info-container').classList.add('hidden')">
+                Deactivate
+            </button>
+        `;
+    }
 
     container.classList.remove('hidden');
     if (window.lucide) lucide.createIcons();
@@ -443,6 +723,68 @@ function showNetworkToolStatus(msg, isError = false) {
     out.classList.remove('hidden');
     out.innerText = msg;
     out.style.color = isError ? 'var(--danger-color)' : 'var(--accent-color)';
+}
+
+/* --- NEW: SYSTEM OPTIMIZER LOGIC --- */
+
+let isOptimizing = { network: false, system: false };
+
+async function triggerOptimization(type) {
+    if (isOptimizing[type]) return;
+    isOptimizing[type] = true;
+
+    const circle = document.getElementById(`opt-${type}-circle`);
+    const floatContainer = document.getElementById(`float-${type}`);
+    
+    // Set to boosting state
+    circle.className = 'optimizer-circle boosting';
+
+    try {
+        const res = await fetch(`${API_BASE}/${type}/optimize`, { method: 'POST' });
+        const data = await res.json();
+        
+        let actions = data.actions || ["Optimization complete"];
+        let delay = 0;
+
+        // Loop through actions and create floating text
+        actions.forEach((action, index) => {
+            setTimeout(() => {
+                const msg = document.createElement('div');
+                msg.className = 'float-msg';
+                msg.innerText = action;
+                floatContainer.appendChild(msg);
+
+                // Remove element after animation (2s)
+                setTimeout(() => msg.remove(), 2000);
+            }, delay);
+            delay += 800; // stagger the floating text
+        });
+
+        // After all text has floated
+        setTimeout(() => {
+            circle.className = 'optimizer-circle state-good';
+            isOptimizing[type] = false;
+        }, delay + 1000);
+
+    } catch (err) {
+        // Fallback error state
+        setTimeout(() => {
+            circle.className = 'optimizer-circle state-crit';
+            isOptimizing[type] = false;
+        }, 1000);
+    }
+}
+
+function showTooltip(el, msg) {
+    // Basic native tooltip or let title attribute handle it. 
+    // We can just set title.
+    if (!el.hasAttribute('title')) {
+        el.setAttribute('title', msg);
+    }
+}
+
+function hideTooltip(el) {
+    // Optionally clear it, but title is fine.
 }
 
 async function runWordSearch() {
@@ -706,42 +1048,108 @@ function closeSSHModal() {
     document.getElementById('ssh-modal').classList.add('hidden');
 }
 
-function connectSSH() {
+async function connectSSH() {
     const host = document.getElementById('ssh-host').value;
     const user = document.getElementById('ssh-user').value;
     const pass = document.getElementById('ssh-pass').value;
+    const btn = event.target || document.querySelector('#ssh-setup button');
 
     if (!host || !user || !pass) {
         alert("Please enter all credentials.");
         return;
     }
 
-    // Hide setup, show terminal (simulated session)
-    document.getElementById('ssh-setup').classList.add('hidden');
-    document.getElementById('ssh-terminal-container').classList.remove('hidden');
-    addTermLine(`Connected to ${user}@${host}...`);
+    const oldText = btn.innerText;
+    btn.innerText = "Connecting...";
+    btn.disabled = true;
+
+    try {
+        const res = await fetch(`${API_BASE}/ssh/test`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({host, user, password: pass})
+        });
+        const data = await res.json();
+        
+        btn.innerText = oldText;
+        btn.disabled = false;
+
+        if (data.success) {
+            // Hide setup, show terminal
+            document.getElementById('ssh-setup').classList.add('hidden');
+            document.getElementById('ssh-disconnect-btn').classList.remove('hidden');
+            
+            const container = document.getElementById('ssh-terminal-container');
+            container.classList.remove('hidden', 'disconnected');
+            container.classList.add('connected');
+
+            const output = document.getElementById('ssh-output');
+            output.innerHTML = ''; // Clear previous text
+            
+            const cmdInput = document.getElementById('ssh-cmd-input');
+            cmdInput.disabled = false;
+            cmdInput.focus();
+
+            addTermLine(`┌──[SysTool Shell]──[${user}@${host}]`, 'cmd');
+            addTermLine(`└─$ Session established at ${new Date().toLocaleTimeString()}`, 'cmd');
+            addTermLine('', '');
+        } else {
+            alert("SSH Failed: " + (data.error || "Authentication Error"));
+        }
+    } catch (err) {
+        btn.innerText = oldText;
+        btn.disabled = false;
+        alert("Network Error: Could not reach SSH endpoint.");
+    }
 }
 
-function addTermLine(text, isError = false) {
+function disconnectSSH() {
+    const container = document.getElementById('ssh-terminal-container');
+    container.classList.remove('connected');
+    container.classList.add('disconnected');
+
+    const cmdInput = document.getElementById('ssh-cmd-input');
+    cmdInput.disabled = true;
+    cmdInput.value = '';
+
+    document.getElementById('ssh-disconnect-btn').classList.add('hidden');
+
+    addTermLine('', '');
+    addTermLine('Connection closed.', 'err');
+    addTermLine('─────────────────────────────', 'err');
+
+    // After a short delay, return to disconnected grey state
+    setTimeout(() => {
+        document.getElementById('ssh-setup').classList.remove('hidden');
+        container.classList.add('hidden');
+        container.classList.remove('disconnected', 'connected');
+    }, 3000);
+}
+
+function addTermLine(text, type = 'output') {
     const output = document.getElementById('ssh-output');
     const line = document.createElement('div');
     line.className = 'term-line';
-    if (isError) line.style.color = '#ff4444';
+    if (type === 'cmd') line.classList.add('cmd-line');
+    else if (type === 'err') line.classList.add('err-line');
+    else line.classList.add('output-line');
     line.innerText = text;
     output.appendChild(line);
-    output.scrollTop = output.scrollHeight;
+    output.scrollTop = output.scrollHeight; // auto-scroll to bottom
 }
+
+
 
 async function sendSSHCommand() {
     const input = document.getElementById('ssh-cmd-input');
-    const command = input.value;
+    const command = input.value.trim();
     if (!command) return;
 
     const host = document.getElementById('ssh-host').value;
     const user = document.getElementById('ssh-user').value;
     const pass = document.getElementById('ssh-pass').value;
 
-    addTermLine(`$ ${command}`);
+    addTermLine(`$ ${command}`, 'cmd');
     input.value = '';
 
     try {
@@ -751,9 +1159,8 @@ async function sendSSHCommand() {
             body: JSON.stringify({host, user, password: pass, command})
         });
         const data = await res.json();
-        if (data.output) addTermLine(data.output);
-        if (data.error) addTermLine(data.error, true);
-        if (data.error && !data.output) addTermLine("Execution failed: " + data.error, true);
+        if (data.output) addTermLine(data.output.trim(), 'output');
+        if (data.error && data.error.trim()) addTermLine(data.error.trim(), 'err');
     } catch (err) {
         addTermLine("Transmission Error: " + err, true);
     }
@@ -916,6 +1323,65 @@ async function runMalwareScan() {
         btn.disabled = false;
     }
 }
+
+async function runNetworkSecurityScan() {
+    const resultsDiv = document.getElementById('network-scan-results');
+    resultsDiv.innerHTML = '<div class="empty-msg">Scanning network connections...</div>';
+    
+    const priority = { 'FAIL': 0, 'WARNING': 1, 'INFO': 2, 'PASS': 3 };
+
+    try {
+        const res = await fetch(`${API_BASE}/security/network_scan`);
+        const data = await res.json();
+        
+        resultsDiv.innerHTML = '';
+        
+        if (data.length === 0) {
+            resultsDiv.innerHTML = '<div class="empty-msg">No connections audited.</div>';
+            return;
+        }
+
+        data.sort((a,b) => priority[a.status] - priority[b.status]);
+
+        data.forEach(item => {
+            const entry = document.createElement('div');
+            entry.className = 'audit-entry';
+            
+            let statusColor = 'var(--accent-color)';
+            let statusClass = 'status-info-bg';
+            if (item.status === 'PASS') { statusColor = 'var(--success-color)'; statusClass = 'status-pass-bg'; }
+            if (item.status === 'WARNING') { statusColor = 'var(--warning-color)'; statusClass = 'status-warn-bg'; }
+            if (item.status === 'FAIL') { statusColor = 'var(--danger-color)'; statusClass = 'status-fail-bg'; }
+            
+            entry.style.borderLeftColor = statusColor;
+            
+            const canFix = item.fix_command && item.fix_command.trim().length > 0;
+            
+            entry.innerHTML = `
+                <div class="audit-header">
+                    <span class="audit-check">${item.check}: ${item.target}</span>
+                    <span class="audit-status ${statusClass}">${item.status}</span>
+                </div>
+                ${item.suggestion ? `
+                    <div class="security-suggestion hidden">
+                        <div class="fix-hint">${item.suggestion}</div>
+                        ${item.fix_command ? `<code style="display:block; background:rgba(255,255,255,0.05); padding:0.5rem; border-radius:4px; font-size:0.75rem">${item.fix_command}</code>` : ''}
+                    </div>
+                ` : ''}
+            `;
+            
+            if (item.suggestion) {
+                entry.onclick = (e) => {
+                    if (e.target.tagName === 'BUTTON' || e.target.tagName === 'CODE') return;
+                    entry.classList.toggle('active');
+                    entry.querySelector('.security-suggestion').classList.toggle('hidden');
+                };
+            }
+            resultsDiv.appendChild(entry);
+        });
+    } catch (err) { resultsDiv.innerHTML = '<div class="empty-msg">Scan failed to reach backend.</div>'; }
+}
+
 
 function updateSparkline(id, value) {
     const metric = id.split('-')[0];
@@ -1377,5 +1843,187 @@ async function executeAiFix(fixTitle, btn) {
         alert("Network error occurred during fix execution.");
         btn.innerText = originalText;
         btn.disabled = false;
+    }
+}
+
+/* --- FILE TRANSFER LOGIC --- */
+
+let currentTransferMode = 'send';
+
+function setTransferMode(mode) {
+    currentTransferMode = mode;
+    document.querySelectorAll('.transfer-tab').forEach(t => {
+        t.classList.toggle('active', t.innerText.toLowerCase().includes(mode));
+    });
+    
+    const pathLabel = document.getElementById('tr-path-label');
+    const destLabel = document.getElementById('tr-dest-label');
+    
+    if (mode === 'send') {
+        pathLabel.innerText = 'Local File/Folder Path';
+        destLabel.innerText = 'Remote Destination Path';
+    } else {
+        pathLabel.innerText = 'Remote Source Path';
+        destLabel.innerText = 'Local Destination Path';
+    }
+}
+
+async function checkSSHStatus() {
+    const area = document.getElementById('ssh-service-check-area');
+    const uicore = document.getElementById('transfer-ui-core');
+    const btn = document.getElementById('tr-exec-btn');
+    if (!area) return;
+    
+    area.innerHTML = '<div class="empty-msg">Checking SSH service status...</div>';
+    
+    try {
+        const res = await fetch(`${API_BASE}/linux/ssh_status`);
+        const data = await res.json();
+        
+        if (data.active) {
+            area.innerHTML = '<div style="color:var(--success-color); font-size:0.85rem;"><i data-lucide="check-circle" class="icon" style="width:14px; height:14px; margin-right:5px;"></i> SSH service is active on port 22.</div>';
+            if (uicore) uicore.classList.remove('hidden');
+            if (btn) btn.classList.remove('hidden');
+        } else {
+            area.innerHTML = `
+                <div class="ssh-alert-pane">
+                    <p style="margin-bottom:1rem;"><strong>SSH service is not active.</strong> File transfer requires port 22 to be listening.</p>
+                    <button class="btn-primary" onclick="enableSSH()">Enable & Fix SSH Service</button>
+                </div>
+            `;
+        }
+        if (window.lucide) lucide.createIcons();
+    } catch (e) {
+        area.innerHTML = '<div class="error-msg">Failed to check SSH status.</div>';
+    }
+}
+
+async function enableSSH() {
+    const area = document.getElementById('ssh-service-check-area');
+    area.innerHTML = '<div class="empty-msg">Starting SSH service...</div>';
+    
+    try {
+        const res = await fetch(`${API_BASE}/linux/ssh_enable`, { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+            checkSSHStatus();
+        } else {
+            area.innerHTML = `<div class="error-msg">Failed: ${data.error}</div>`;
+        }
+    } catch (e) {
+        area.innerHTML = '<div class="error-msg">Execution error.</div>';
+    }
+}
+
+async function confirmAndTransfer() {
+    const ip = document.getElementById('tr-ip').value;
+    const user = document.getElementById('tr-user').value;
+    const path = document.getElementById('tr-path').value;
+    const dest = document.getElementById('tr-dest').value;
+    const rsync = document.getElementById('tr-rsync').checked;
+    
+    if (!ip || !user || !path || !dest) {
+        alert("Please fill in all transfer parameters.");
+        return;
+    }
+    
+    if (!confirm(`Confirm ${currentTransferMode.toUpperCase()} transfer to/from ${user}@${ip}?`)) return;
+    
+    const statusArea = document.getElementById('tr-status-area');
+    statusArea.classList.remove('hidden');
+    statusArea.innerHTML = `
+        <div class="transfer-status-bubble">
+            <div id="tr-status-text">Connecting...</div>
+            <div class="transfer-progress"><div id="tr-progress-fill" class="transfer-progress-fill"></div></div>
+        </div>
+    `;
+    
+    const fill = document.getElementById('tr-progress-fill');
+    const txt = document.getElementById('tr-status-text');
+    
+    fill.style.width = '15%';
+    txt.innerText = 'Initiating protocol...';
+    
+    try {
+        const res = await fetch(`${API_BASE}/linux/transfer`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                mode: currentTransferMode, ip, user, filePath: path, destPath: dest, rsync
+            })
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+            fill.style.width = '100%';
+            fill.style.background = '#10b981';
+            txt.innerText = 'Transfer Completed Successfully!';
+        } else {
+            fill.style.width = '100%';
+            fill.style.background = '#ef4444';
+            txt.innerHTML = `<span style="color:#ef4444">Transfer Failed:</span> <pre style="font-size:0.75rem; margin-top:0.5rem; color:#ef4444">${data.stderr || data.error}</pre>`;
+        }
+    } catch (e) {
+        txt.innerText = 'Network error during transfer.';
+    }
+}
+
+/* --- WINDOWS UNIFIED INFO --- */
+
+async function loadWinUnifiedInfo() {
+    const containers = {
+        hw: document.getElementById('win-hw-content'),
+        os: document.getElementById('win-os-content'),
+        net: document.getElementById('win-net-content'),
+        stat: document.getElementById('win-stat-content')
+    };
+    
+    if (!containers.hw) return;
+    
+    Object.values(containers).forEach(c => c.innerHTML = '<div class="empty-msg"><i data-lucide="refresh-cw" class="icon spin"></i> Auditing system...</div>');
+    if (window.lucide) lucide.createIcons();
+    
+    try {
+        const res = await fetch(`${API_BASE}/windows/unified_sysinfo`);
+        const data = await res.json();
+        
+        const parse = (jsonStr) => {
+            try { return JSON.parse(jsonStr); } catch(e) { return null; }
+        };
+
+        // Render Hardware
+        const cpu = parse(data.hardware.cpu);
+        const ram = parse(data.hardware.ram);
+        containers.hw.innerHTML = `
+            <div class="win-info-item"><span class="label">CPU Model</span><span class="value">${cpu ? cpu.Name : 'System Processor'}</span></div>
+            <div class="win-info-item"><span class="label">Cores</span><span class="value">${cpu ? cpu.NumberOfCores : '--'} Cores detected</span></div>
+            <div class="win-info-item"><span class="label">Total RAM</span><span class="value">${ram ? (ram.Sum / 1024**3).toFixed(1) + ' GB Installed' : '--'}</span></div>
+        `;
+
+        // Render OS
+        const os = parse(data.os);
+        containers.os.innerHTML = `
+            <div class="win-info-item"><span class="label">Windows Version</span><span class="value">${os ? os.Caption : 'Windows OS'}</span></div>
+            <div class="win-info-item"><span class="label">Build</span><span class="value">v${os ? os.BuildNumber : '--'}</span></div>
+            <div class="win-info-item"><span class="label">Architecture</span><span class="value">${os ? os.OSArchitecture : '--'} x64</span></div>
+        `;
+
+        // Render Network
+        const ips = parse(data.network.ips);
+        const ipList = Array.isArray(ips) ? ips : (ips ? [ips] : []);
+        containers.net.innerHTML = ipList.map(ip => `
+            <div class="win-info-item"><span class="label">${ip.InterfaceAlias}</span><span class="value">${ip.IPAddress}</span></div>
+        `).join('') || '<div class="empty-msg">No active interfaces</div>';
+
+        // Render Status
+        const uptime = parse(data.status.uptime);
+        containers.stat.innerHTML = `
+            <div class="win-info-item"><span class="label">System Uptime</span><span class="value">${uptime ? `${uptime.Days}d ${uptime.Hours}h ${uptime.Minutes}m` : '--'}</span></div>
+            <div class="win-info-item"><span class="label">System Status</span><span class="value" style="color:#10b981">Healthy (WMI Verified)</span></div>
+        `;
+        
+        if (window.lucide) lucide.createIcons();
+    } catch (e) {
+        Object.values(containers).forEach(c => c.innerHTML = '<div class="error-msg">Failed to retrieve audit data. Check WSL interop.</div>');
     }
 }

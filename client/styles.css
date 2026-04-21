@@ -71,6 +71,7 @@ body {
     position: sticky;
     top: 0;
     z-index: 100;
+    transition: background 0.4s ease, border-color 0.4s ease;
 }
 
 .logo {
@@ -81,6 +82,7 @@ body {
 
 .logo span {
     color: var(--accent-color);
+    transition: color 0.4s ease;
 }
 
 .logo .v-tag {
@@ -90,54 +92,6 @@ body {
     margin-left: 2px;
     vertical-align: top;
 }
-
-/* Theme Switch Toggle */
-.theme-switch-wrapper {
-    display: flex;
-    align-items: center;
-    gap: 0.8rem;
-}
-
-.theme-switch {
-    display: inline-block;
-    height: 24px;
-    position: relative;
-    width: 44px;
-}
-
-.theme-switch input {
-    display: none;
-}
-
-.slider {
-    background-color: var(--input-bg);
-    bottom: 0;
-    cursor: pointer;
-    left: 0;
-    position: absolute;
-    right: 0;
-    top: 0;
-    transition: .4s;
-    border: 1px solid var(--border-color);
-}
-
-.slider:before {
-    background-color: white;
-    bottom: 3px;
-    content: "";
-    height: 16px;
-    left: 4px;
-    position: absolute;
-    transition: .4s;
-    width: 16px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-}
-
-input:checked + .slider {
-    background-color: var(--accent-color);
-}
-
-input:checked + .slider:before {
     transform: translateX(20px);
 }
 
@@ -602,51 +556,101 @@ input:focus {
 .close-btn:hover { opacity: 1; }
 
 .terminal-container {
-    background: #000;
-    border: 1px solid #222;
+    background: #1a1a1a;
+    border: 1px solid #2a2a2a;
     border-radius: 8px;
-    padding: 1rem;
+    padding: 0.75rem 1rem;
     flex: 1;
     display: flex;
     flex-direction: column;
     font-family: 'Courier New', Courier, monospace;
     overflow: hidden;
+    max-height: 240px;
+    transition: background 0.4s ease, border-color 0.4s ease;
+}
+
+.terminal-container.connected {
+    background: #000;
+    border-color: #1a4731;
+    box-shadow: 0 0 12px rgba(51, 255, 51, 0.08);
+}
+
+.terminal-container.disconnected {
+    background: #1c1c1c;
+    border-color: #333;
+    box-shadow: none;
 }
 
 .terminal-output {
     flex: 1;
     overflow-y: auto;
     color: #33ff33;
-    font-size: 0.9rem;
-    line-height: 1.5;
-    margin-bottom: 1rem;
+    font-size: 0.82rem;
+    line-height: 1.55;
+    margin-bottom: 0.5rem;
     padding-right: 0.5rem;
+    scroll-behavior: smooth;
+}
+
+/* Scrollbar styling for output */
+.terminal-output::-webkit-scrollbar {
+    width: 4px;
+}
+.terminal-output::-webkit-scrollbar-track { background: transparent; }
+.terminal-output::-webkit-scrollbar-thumb {
+    background: #333;
+    border-radius: 2px;
+}
+
+.disconnected .terminal-output {
+    color: #666;
 }
 
 .term-line {
-    margin-bottom: 0.2rem;
+    margin-bottom: 0.15rem;
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
+.term-line.output-line {
+    color: #d4d4d4;
+}
+
+.term-line.cmd-line {
+    color: #33ff33;
+    font-weight: bold;
+}
+
+.term-line.err-line {
+    color: #ff5555;
 }
 
 .terminal-input-line {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    border-top: 1px solid #222;
-    padding-top: 1rem;
+    border-top: 1px solid #2a2a2a;
+    padding-top: 0.5rem;
 }
 
-.prompt { color: #33ff33; font-weight: bold; }
+.connected .terminal-input-line { border-top-color: #1a4731; }
+.disconnected .terminal-input-line { border-top-color: #2a2a2a; }
+
+.prompt { color: #33ff33; font-weight: bold; font-size: 0.85rem; }
+.disconnected .prompt { color: #555; }
 
 #ssh-cmd-input {
     background: none;
     border: none;
-    color: #fff;
+    color: #e0e0e0;
     width: 100%;
-    font-size: 0.9rem;
+    font-size: 0.82rem;
     font-family: inherit;
 }
 
 #ssh-cmd-input:focus { outline: none; }
+#ssh-cmd-input:disabled { color: #555; cursor: not-allowed; }
+
 
 .hidden { display: none !important; }
 
@@ -1308,4 +1312,412 @@ input:focus {
     justify-content: flex-end;
     background: var(--card-bg);
     border-radius: 0 0 12px 12px;
+}
+
+/* System Optimizer UI */
+.optimizer-grid {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    margin: 1.5rem 0;
+}
+
+.optimizer-circle-container {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+}
+
+.optimizer-circle {
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+}
+
+.optimizer-circle:hover {
+    transform: scale(1.05);
+}
+
+.circle-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.3rem;
+    z-index: 2;
+    color: var(--text-primary);
+    font-size: 0.85rem;
+}
+
+.circle-icon {
+    width: 24px;
+    height: 24px;
+}
+
+.ring-svg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+}
+
+.base-ring {
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.05);
+    stroke-width: 6;
+}
+
+.progress-ring {
+    fill: none;
+    stroke-width: 6;
+    stroke-dasharray: 283;
+    stroke-dashoffset: 0;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.5s ease;
+    transform-origin: center;
+}
+
+/* Optimizer States */
+.state-neutral .progress-ring { stroke: var(--text-secondary); opacity: 0.5; }
+.state-neutral { animation: idlePulse 3s infinite ease-in-out; }
+.state-good .progress-ring { stroke: var(--success-color); }
+.state-warn .progress-ring { stroke: var(--warning-color); }
+.state-crit .progress-ring { stroke: var(--danger-color); }
+
+.optimizer-circle.state-good { box-shadow: 0 0 30px rgba(16, 185, 129, 0.2); }
+.optimizer-circle.state-warn { box-shadow: 0 0 30px rgba(245, 158, 11, 0.2); }
+.optimizer-circle.state-crit { box-shadow: 0 0 30px rgba(239, 68, 68, 0.2); }
+
+@keyframes idlePulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.08); box-shadow: 0 0 15px rgba(255, 255, 255, 0.1); }
+    100% { transform: scale(1); }
+}
+
+/* Animation: Boosting */
+.boosting {
+    pointer-events: none;
+}
+.boosting .progress-ring {
+    stroke: var(--accent-color);
+    stroke-dasharray: 140 283;
+    animation: spinRing 1s linear infinite;
+}
+
+@keyframes spinRing {
+    to { transform: rotate(360deg); }
+}
+
+/* Floating Text Animation */
+.floating-text-container {
+    position: absolute;
+    top: -20px;
+    left: 50%;
+    width: max-content;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    pointer-events: none;
+    z-index: 10;
+}
+
+.float-msg {
+    color: var(--accent-color);
+    font-size: 0.8rem;
+    font-weight: bold;
+    position: absolute;
+    opacity: 0;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+    animation: floatUp 2s cubic-bezier(0, 0, 0.2, 1) forwards;
+}
+
+@keyframes floatUp {
+    0% { transform: translate(-50%, 0) scale(0.8); opacity: 0; }
+    20% { transform: translate(-50%, -15px) scale(1.1); opacity: 1; }
+    80% { transform: translate(-50%, -40px) scale(1); opacity: 1; }
+    100% { transform: translate(-50%, -50px) scale(0.9); opacity: 0; }
+}
+
+/* ============================================
+   REFINED SETTINGS & TOGGLES
+   ============================================ */
+
+.settings-stack {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.6rem;
+}
+
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 30px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: var(--input-bg);
+    transition: background-color 0.4s ease, border-color 0.4s ease;
+    border: 1px solid var(--border-color);
+}
+
+.slider.round {
+    border-radius: 34px;
+}
+
+/* The Sliding Ball/Thumb */
+.thumb {
+    position: absolute;
+    height: 24px;
+    width: 24px;
+    left: 3px;
+    bottom: 2px;
+    background-color: white;
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    overflow: hidden;
+    z-index: 2;
+}
+
+input:checked + .slider .thumb {
+    transform: translateX(28px);
+}
+
+/* Icons Inside Thumb */
+.thumb i, .thumb svg {
+    width: 14px;
+    height: 14px;
+    position: absolute;
+    transition: opacity 0.3s ease, transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Theme Toggle Details - Rotation */
+.theme-toggle input:checked + .slider { background-color: var(--accent-color); }
+.theme-toggle .icon-sun { opacity: 1; color: #f59e0b; transform: rotate(0deg); }
+.theme-toggle .icon-moon { opacity: 0; color: #1e293b; transform: rotate(-90deg); }
+
+.theme-toggle input:checked + .slider .icon-sun { opacity: 0; transform: rotate(90deg); }
+.theme-toggle input:checked + .slider .icon-moon { opacity: 1; transform: rotate(0deg); }
+
+/* OS Toggle Details - Flip Effect */
+.os-toggle input:checked + .slider { background-color: #60a5fa; }
+.os-toggle .icon-win { opacity: 0; color: #0078d4; transform: rotateY(-180deg); }
+.os-toggle .icon-lin { opacity: 1; color: #1a1a1a; transform: rotateY(0deg); }
+
+.os-toggle input:checked + .slider .icon-win { opacity: 1; transform: rotateY(0deg); }
+.os-toggle input:checked + .slider .icon-lin { opacity: 0; transform: rotateY(180deg); }
+
+/* Common UI Elements Transition */
+.panel, .btn-primary, .btn-secondary, .list-container, .chart-container, input, select {
+    transition: background 0.4s ease, color 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease, transform 0.3s ease;
+}
+
+/* OS Switch Module Animations */
+.module-section {
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+    opacity: 1;
+    transform: translateX(0);
+}
+
+/* Animation states for JS to toggle */
+.os-anim-exit {
+    opacity: 0 !important;
+    transform: translateX(-30px) !important;
+}
+
+.os-anim-enter {
+    opacity: 0 !important;
+    transform: translateX(30px) !important;
+}
+
+/* ============================================
+   WINDOWS MODE THEME (WHITE/BLUE/BLACK)
+   ============================================ */
+
+body.win-mode {
+    --bg-color: #f8fafc;
+    --card-bg: #ffffff;
+    --nav-bg: #ffffff;
+    --text-primary: #001f3f; /* Dark Blue */
+    --text-secondary: #475569; /* Slate */
+    --border-color: rgba(0, 31, 63, 0.1);
+    --input-bg: rgba(0, 31, 63, 0.03);
+    --accent-color: #3b82f6;
+    --accent-gradient: linear-gradient(135deg, #3b82f6, #0078d4);
+    --glass-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+}
+
+body.win-mode .panel {
+    border: 1px solid rgba(0, 31, 63, 0.08);
+    box-shadow: var(--glass-shadow);
+    background: #ffffff;
+}
+
+body.win-mode .nav-links,
+body.win-mode #nav-monitoring,
+body.win-mode #nav-system,
+body.win-mode #nav-network,
+body.win-mode #nav-security,
+body.win-mode #nav-ai {
+    display: none !important;
+}
+
+body.win-mode #windows-module {
+    display: block !important;
+}
+
+body.win-mode .logo { color: #001f3f; }
+body.win-mode .logo span { color: #3b82f6; }
+
+@keyframes osFadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================================
+   WINDOWS UNIFIED INFO GRID
+   ============================================ */
+.win-info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+    margin-top: 1rem;
+}
+
+@media (max-width: 800px) {
+    .win-info-grid { grid-template-columns: 1fr; }
+}
+
+.win-info-card {
+    background: var(--input-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1.25rem;
+    transition: transform 0.2s ease;
+}
+
+.win-info-card:hover {
+    border-color: var(--accent-color);
+}
+
+.win-info-card h3 {
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    color: var(--accent-color);
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 0.5rem;
+}
+
+.win-info-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+.win-info-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.win-info-item .label {
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+}
+
+.win-info-item .value {
+    font-size: 0.88rem;
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+/* ============================================
+   FILE TRANSFER UI
+   ============================================ */
+.transfer-ui-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.transfer-tabs {
+    display: flex;
+    gap: 1rem;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 1rem;
+}
+
+.transfer-tab {
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: 0.2s;
+    color: var(--text-secondary);
+}
+
+.transfer-tab.active {
+    color: var(--accent-color);
+    border-bottom-color: var(--accent-color);
+}
+
+.transfer-form {
+    display: grid;
+    gap: 1rem;
+}
+
+.transfer-status-bubble {
+    padding: 1rem;
+    background: var(--input-bg);
+    border-radius: 8px;
+    margin-top: 1rem;
+}
+
+.transfer-progress {
+    height: 8px;
+    background: rgba(0,0,0,0.1);
+    border-radius: 4px;
+    overflow: hidden;
+    margin: 0.5rem 0;
+}
+
+.transfer-progress-fill {
+    height: 100%;
+    background: var(--accent-gradient);
+    width: 0%;
+    transition: width 0.3s ease;
+}
+
+.ssh-alert-pane {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid var(--danger-color);
+    padding: 1.5rem;
+    border-radius: 12px;
+    text-align: center;
+    margin-bottom: 1.5rem;
 }
