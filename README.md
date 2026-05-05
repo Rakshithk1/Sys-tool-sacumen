@@ -95,3 +95,6 @@ Built-in AI-powered system assistant:
 
 cd server
 python app.py
+
+## 📜 Notes
+This project originated as a shell-based utility and was later evolved into a full system monitoring and automation platform using AI-assisted development tools.
